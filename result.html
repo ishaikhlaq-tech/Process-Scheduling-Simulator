@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulation Results</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <h1>📊 Scheduling Report</h1>
+
+  <div class="metrics-container">
+    
+    <div class="metric-card winner" id="bestCard">
+      <h3>🏆 Best Algorithm</h3>
+      <p id="bestAlgo">Calculating...</p>
+    </div>
+
+    <div class="metric-card">
+      <h3>⏳ Avg Waiting</h3>
+      <p id="avgWait">--</p>
+    </div>
+
+    <div class="metric-card">
+      <h3>🔄 Avg Turnaround</h3>
+      <p id="avgTurn">--</p>
+    </div>
+
+    <div class="metric-card" id="worstCard" style="border-color: #ff4b4b;">
+      <h3 style="color: #ff4b4b;">❌ Worst Algorithm</h3>
+      <p id="worstAlgo" style="color: #ff4b4b;">--</p>
+    </div>
+
+  </div>
+
+  <h2 style="margin-top: 40px; color: #fff;">🚀 Execution Timeline</h2>
+  <div id="gantt"></div>
+
+  <button class="restart-btn" onclick="restart()">
+    🔄 Run New Simulation
+  </button>
+</div>
+<script>
+  // 1. GET DATA
+  const data = JSON.parse(localStorage.getItem("results"));
+
+  if (!data) {
+    alert("No results found. Run simulation again.");
+    window.location.href = "index.html";
+  }
+
+  // 2. DETECT MODE & GATHER RESULTS
+  let isCompareMode = false;
+  let resultsToRender = [];
+
+  if (data.results && Array.isArray(data.results) && data.results.length > 1) {
+    isCompareMode = true;
+    resultsToRender = data.results; // Grab ALL algorithms!
+  } else {
+    isCompareMode = false;
+    resultsToRender = [data.results ? data.results[0] : data]; // Just the single one
+  }
+
+  // 3. TOP CARDS UI
+  if (isCompareMode) {
+    // Show Best/Worst
+    document.getElementById("bestAlgo").innerText = data.best_algorithm;
+    document.getElementById("worstAlgo").innerText = data.worst_algorithm;
+    
+    // Hide the top Wait/Turn cards (we will show them next to each timeline instead)
+    document.getElementById("avgWait").parentElement.style.display = "none";
+    document.getElementById("avgTurn").parentElement.style.display = "none";
+    
+    document.querySelector("h1").innerText = `📊 Compare All Report`;
+  } else {
+    // Single Mode: Hide Best/Worst cards
+    document.getElementById("bestCard").style.display = "none";
+    document.getElementById("worstCard").style.display = "none";
+    
+    // Fill the top Wait/Turn cards
+    document.getElementById("avgWait").innerText = resultsToRender[0].average_waiting_time.toFixed(2) + " ms";
+    document.getElementById("avgTurn").innerText = resultsToRender[0].average_turnaround_time.toFixed(2) + " ms";
+    
+    document.querySelector("h1").innerText = `📊 ${resultsToRender[0].algorithm} Report`;
+  }
+
+  // 4. HIDE OLD HARDCODED GANTT HTML
+  // We will dynamically generate everything so it stacks perfectly
+  document.querySelector("h2").style.display = "none"; 
+  document.getElementById("gantt").style.display = "none";
+
+
+       // 5. DYNAMICALLY RENDER ALL TIMELINES
+  const restartBtn = document.querySelector(".restart-btn");
+
+  resultsToRender.forEach((result) => {
+    // --- 1. THE ALGORITHM CARD (Creates visual sections) ---
+    const algoWrapper = document.createElement("div");
+    algoWrapper.style.marginTop = "25px";
+    algoWrapper.style.marginBottom = "30px";
+    algoWrapper.style.padding = "25px";
+    algoWrapper.style.background = "rgba(255, 255, 255, 0.03)"; // Very subtle bright layer
+    algoWrapper.style.border = "1px solid rgba(0, 242, 254, 0.15)"; // Soft neon border
+    algoWrapper.style.borderRadius = "15px";
+    algoWrapper.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.3)"; // Outer shadow
+    
+    // Create a Custom Title with inline Wait/Turn metrics
+    const title = document.createElement("h2");
+    title.style.color = "#fff";
+    title.style.fontFamily = "'Orbitron', sans-serif";
+    title.style.fontSize = "1.3rem";
+    title.style.marginTop = "0";
+    title.style.marginBottom = "15px";
+    title.innerHTML = `🚀 ${result.algorithm} 
+      <span style="font-size: 0.9rem; color: #00f2fe; margin-left: 15px; font-family: 'Poppins', sans-serif; font-weight: normal; letter-spacing: 0.5px;">
+        Avg Wait: ${result.average_waiting_time.toFixed(2)}ms | Avg Turn: ${result.average_turnaround_time.toFixed(2)}ms
+      </span>`;
+    
+    // --- 2. THE GANTT CONTAINER (Stops the blocks from floating) ---
+    const ganttDiv = document.createElement("div");
+    ganttDiv.style.display = "flex";
+    ganttDiv.style.flexWrap = "wrap";
+    ganttDiv.style.gap = "10px";
+    ganttDiv.style.padding = "20px";
+    ganttDiv.style.background = "#0b1120"; // Very dark background for the track
+    ganttDiv.style.border = "1px solid #1e293b";
+    ganttDiv.style.borderRadius = "10px";
+    ganttDiv.style.boxShadow = "inset 0px 4px 15px rgba(0, 0, 0, 0.6)"; // Inner shadow for depth
+
+    const ganttData = result.gantt_chart || result.gantt || [];
+
+    if (ganttData.length === 0) {
+      ganttDiv.innerText = "No Gantt data received.";
+      ganttDiv.style.color = "#888";
+    } else {
+      let currentTime = 0;
+
+      ganttData.forEach((block, index) => {
+        const pid = block.pid;
+        const start = block.start ?? block.start_time;
+        const end = block.end ?? block.finish_time;
+
+        // --- THE IDLE BLOCK FIX ---
+        if (start > currentTime) {
+          const idleDuration = start - currentTime;
+          const idleDiv = document.createElement("div");
+          idleDiv.className = "gantt-block"; 
+          idleDiv.style.width = Math.max(50, idleDuration * 40) + "px";
+          idleDiv.style.background = "transparent";
+          idleDiv.style.border = "2px dashed #475569";
+          idleDiv.style.boxShadow = "none";
+          idleDiv.innerHTML = `
+            <span class="gantt-pid" style="color: #64748b;">IDLE</span>
+            <span class="gantt-time" style="color: #475569;">${currentTime} - ${start}</span>
+          `;
+          ganttDiv.appendChild(idleDiv);
+        }
+
+        // --- NORMAL PROCESS BLOCK ---
+        const duration = end - start;
+        const div = document.createElement("div");
+        div.className = "gantt-block"; 
+        div.style.width = Math.max(50, duration * 40) + "px";
+        div.innerHTML = `
+          <span class="gantt-pid">${pid}</span>
+          <span class="gantt-time">${start} - ${end}</span>
+        `;
+        div.style.animationDelay = `${index * 0.1}s`;
+        ganttDiv.appendChild(div);
+
+        currentTime = end;
+      });
+    }
+
+    // Put it all together and insert it right above the Restart Button
+    algoWrapper.appendChild(title);
+    algoWrapper.appendChild(ganttDiv);
+    restartBtn.parentNode.insertBefore(algoWrapper, restartBtn);
+  });
+
+  function restart() {
+    localStorage.clear();
+    window.location.href = "index.html";
+  }
+</script>
+</body>
+</html>

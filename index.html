@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CPU Scheduling Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Add this small style to handle hidden columns */
+    .hidden { display: none; }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>CPU Scheduling Simulator</h1>
+
+  <div class="card">
+    <h3>Select Algorithm</h3>
+
+    <select id="algorithm" onchange="toggleInputs()">
+      <option value="compare" selected>Compare All</option>
+      <option value="fcfs">FCFS</option>
+      <option value="sjf">SJF</option>
+      <option value="srtf">SRTF</option>
+      <option value="priority">Priority</option>
+      <option value="rr">Round Robin</option>
+    </select>
+
+<div id="quantum-wrapper" class="quantum-box" style="display:none;">
+  <label for="quantum">Time Quantum (TQ):</label>
+  <input type="number" id="quantum" value="2" min="1">
+</div>  </div>
+
+  <div class="card">
+    <h3>Process Details</h3>
+
+    <table id="processTable">
+      <tr>
+        <th>PID</th>
+        <th>Arrival Time</th>
+        <th>Burst Time</th>
+        <th id="priorityHeader">Priority</th> <th>Action</th>
+      </tr>
+
+      <tr>
+        <td>P1</td>
+        <td><input type="number" value="0" min="0"></td>
+        <td><input type="number" value="0" min="0"></td>
+        <td class="priority-cell"><input type="number" value="1" min="1"></td>
+        <td><button onclick="deleteRow(this)">❌</button></td>
+      </tr>
+    </table>
+
+    <button class="add-btn" onclick="addProcess()">+ Add Process</button>
+  </div>
+
+  <button class="start-btn" onclick="startScheduling()">▶ Start Simulation</button>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
